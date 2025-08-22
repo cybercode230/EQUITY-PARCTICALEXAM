@@ -1,0 +1,212 @@
+Absolutely! I can create a **complete `README.md`** that documents both your **backend** and **frontend**, including API URLs, how frontend consumes them, role-based security, JWT handling, Redis caching, and usage instructions. Here’s a fully structured markdown:
+
+---
+
+# **Order Management System**
+
+This project is a **role-based order management system** with three types of users: **Customer**, **Admin**, and **Manager**. It uses a **microservice-like architecture** within a single project folder. The backend is built with **Node.js, Express, MySQL, Redis**, and the frontend is built with **React + Vite**.
+
+---
+
+## **Backend**
+
+### **Technologies Used**
+
+* Node.js, Express
+* MySQL (Relational Database)
+* Redis (Caching & Session Storage)
+* JWT (Authentication)
+* Knex.js (Query Builder)
+* Bull (Queue Management for Notifications)
+
+---
+
+### **API Structure**
+
+#### **1. Authentication**
+
+| Endpoint             | Method | Body                                  | Access  | Description                                   |
+| -------------------- | ------ | ------------------------------------- | ------- | --------------------------------------------- |
+| `/api/auth/register` | POST   | `{ username, email, password, role }` | Public  | Registers a new user (customer/admin/manager) |
+| `/api/auth/login`    | POST   | `{ email, password }`                 | Public  | Logs in user, returns JWT in HttpOnly cookie  |
+| `/api/auth/logout`   | POST   | `{}`                                  | Private | Logs out user, clears session & Redis         |
+
+---
+
+#### **2. Products**
+
+| Endpoint            | Method | Body                                  | Access                 | Description       |
+| ------------------- | ------ | ------------------------------------- | ---------------------- | ----------------- |
+| `/api/products`     | GET    | N/A                                   | Customer/Admin/Manager | List all products |
+| `/api/products`     | POST   | `{ name, description, price, stock }` | Admin Only             | Add new product   |
+| `/api/products/:id` | PUT    | `{ name, description, price, stock }` | Admin Only             | Update product    |
+| `/api/products/:id` | DELETE | N/A                                   | Admin Only             | Delete product    |
+
+* **Redis Caching:** Products fetched are stored in Redis for fast retrieval.
+
+---
+
+#### **3. Orders**
+
+| Endpoint          | Method | Body                                    | Access        | Description       |                 |               |                     |
+| ----------------- | ------ | --------------------------------------- | ------------- | ----------------- | --------------- | ------------- | ------------------- |
+| `/api/orders`     | GET    | N/A                                     | Admin/Manager | List all orders   |                 |               |                     |
+| `/api/orders`     | GET    | N/A                                     | Customer      | List own orders   |                 |               |                     |
+| `/api/orders`     | POST   | `{ items: [{ product_id, quantity }] }` | Customer      | Place a new order |                 |               |                     |
+| `/api/orders/:id` | PATCH  | \`{ status: 'pending'                   | 'shipped'     | 'delivered'       | 'cancelled' }\` | Admin/Manager | Update order status |
+
+---
+
+### **Security & Middleware**
+
+* **JWT Authentication:** Stored in **HttpOnly cookie** for secure frontend-backend communication.
+* **Role-Based Access Control:** Middleware ensures only users with the proper role can access endpoints.
+* **Redis:** Caches sessions, JWT tokens, and frequently accessed data for speed.
+* **Queue System:** Notifications (e.g., new user, new order) are queued via **Bull** and can be consumed by frontend.
+
+---
+
+### **Backend Example Request**
+
+```bash
+curl -X POST http://localhost:5000/api/auth/login \
+-H "Content-Type: application/json" \
+-d '{"email":"alice@gmail.com","password":"password123"}' \
+--cookie-jar cookies.txt
+```
+
+---
+
+## **Frontend**
+
+### **Technologies Used**
+
+* React + Vite
+* React Router Dom (Routing)
+* Axios (HTTP requests)
+* SCSS (Styling)
+* Context API (State Management)
+
+---
+
+### **Folder Structure**
+
+```
+src/
+ ├── api/          # Axios API calls
+ ├── components/   # UI Components (Auth, Dashboard, Products, Orders)
+ ├── context/      # AuthContext, NotificationContext
+ ├── pages/        # Landing, Dashboard, Login, Register
+ └── App.jsx       # Routes
+```
+
+---
+
+### **Landing Page**
+
+* Default route `/`
+* Shows **Login** and **Register** buttons
+* User must authenticate to access dashboard or protected routes.
+
+---
+
+### **Role-Based Dashboard**
+
+* **Customer:** view products, place orders, view own order history
+* **Admin:** manage products (add/update/delete), view all orders, update order status
+* **Manager:** view all orders, update order status
+
+---
+
+### **Protected Routes**
+
+* `PrivateRoute` component checks if user is logged in and optionally checks role.
+* Redirects to `/login` if user is unauthenticated.
+
+```jsx
+<PrivateRoute allowedRoles={['admin']}>
+  <AdminDashboard />
+</PrivateRoute>
+```
+
+---
+
+### **Frontend API Usage**
+
+* Axios configured with `withCredentials: true` to send JWT cookie automatically:
+
+```js
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: "http://localhost:5000/api",
+  withCredentials: true, // sends JWT cookie
+});
+
+export default api;
+```
+
+* Example usage:
+
+```js
+const { data } = await api.get("/products");
+```
+
+* JWT never stored in localStorage → more secure.
+* Frontend uses **AuthContext** to store user info (`id`, `role`, `username`) and manage login/logout.
+
+---
+
+### **Security Measures**
+
+* **JWT in HttpOnly cookie** → prevents XSS attacks
+* **Role-based route/component rendering** → prevents unauthorized access
+* **Redis for caching sessions and frequently accessed data**
+* **Backend middleware validates JWT** for every request
+
+---
+
+### **Frontend Flow**
+
+1. User lands on `/` → Login/Register
+2. Registers or logs in → user info saved in AuthContext, JWT in HttpOnly cookie
+3. Redirected to `/dashboard` → UI rendered based on role
+4. Access protected routes (`/products`, `/order`) → PrivateRoute ensures authentication
+5. Backend API uses JWT from cookie → data returned securely
+
+---
+
+### **Run Instructions**
+
+#### **Backend**
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+#### **Frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open browser: `http://localhost:5173` (Vite)
+Backend API: `http://localhost:5000/api`
+
+---
+
+✅ This README covers **full backend API**, **frontend usage**, **security setup**, and **role-based flow**.
+
+---
+
+If you want, I can also **add a diagram showing the flow**:
+
+* Landing → Login/Register → Dashboard → Role-based access → Backend API → Redis → Database → Queue notifications.
+
+This will make it **super clear for devs and future maintenance**.
+
+Do you want me to create that diagram too?
